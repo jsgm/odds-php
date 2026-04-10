@@ -12,16 +12,30 @@ namespace OddsPHP;
 
 enum OddsErrors: string {
     case NoOddSet = 'No odd has been set yet.';
+
     case InvalidDecimal = 'Value must be greater than 1.00 (e.g. 1.55).';
-    case InvalidHongKong = 'Value must be greater than 0 (e.g. 0.55).';
     case InvalidFractional = 'Expected format: numerator/denominator (e.g. 2/1).';
+    case InvalidHongKong = 'Value must be greater than 0 (e.g. 0.55).';
+	case InvalidImpliedProbability = 'Implied probability must be greater than 0 and less than 100 (e.g. 55.5).';
+	case InvalidIndonesian = 'Value must be 1.00 or greater, or -1.00 or less (e.g. 1.50 or -2.00).';
+	case InvalidMalay = 'Value must be between 0.01 and 1.00, or between -1.00 and -0.01 (e.g. 0.75 or -0.50).';
     case InvalidMoneyline = 'Value must be 100 or greater, or -100 or less (e.g. 150 or -200).';
+
     case InvalidDecimalPlaces = 'Decimal places must be 0 or greater.';
 }
 
 class Odds{
-   private ?float $decimal = null;
-   private int $decimalPlaces = 2;
+   	private ?float $decimal = null;
+   	private int $decimalPlaces = 2;
+   	private RoundingMode $roundingMode = RoundingMode::HalfAwayFromZero;
+
+	public function getRoundingMode(): RoundingMode{
+		return $this->roundingMode;
+	}
+
+	public function setRoundingMode(RoundingMode $mode): void {
+		$this->roundingMode = $mode;
+	}
 
 	public function setDecimalPlaces(int $places=0): void{
        	if ($places < 0) {
@@ -58,93 +72,90 @@ class Odds{
         	throw new \InvalidArgumentException(OddsErrors::InvalidFractional->value);
 		}
 
-        $this->decimal = $this->fractionalToDecimal($value);
+    	[$numerator, $denominator] = explode('/', $value);
+    	$this->decimal = (int)$numerator / (int)$denominator + 1;
 		return $this;
     }
 
-    public function setMoneyline($odd=NULL): static{
-        if(!Validator::isMoneyline($odd)){
+    public function setMoneyline(int $value): static{
+        if(!Validator::isMoneyline($value)){
         	throw new \InvalidArgumentException(OddsErrors::InvalidMoneyline->value);
 		}
 
-        $this->decimal = $this->moneylineToDecimal($odd);
+        $this->decimal = (abs($value) / 100) + 1;
 		return $this;
 	}
 
-	public function setImpliedProbability($odd): static{
-        $this->decimal=$this->moneylineToDecimal($odd);
+	public function setImpliedProbability(float $value): static{
+		if (!Validator::isImpliedProbability($value)) {
+			throw new \InvalidArgumentException(OddsErrors::InvalidImpliedProbability->value);
+		}
+
+        $this->decimal = 100 / $value;
+		return $this;
+	}
+
+	public function setMalay(float $value): static {
+		if (!Validator::isMalay($value)) {
+			throw new \InvalidArgumentException(OddsErrors::InvalidMalay->value);
+		}
+
+		$this->decimal = $value > 0 ? $value + 1 : 1 - (1 / $value);
 		return $this;
 	}
 
 	public function getHongKong(): float {
 		$this->requireBaseOdd();
-		return round($this->decimal - 1, $this->getDecimalPlaces());
+		return round($this->decimal - 1, $this->getDecimalPlaces(), $this->getRoundingMode());
 	}
 
 	public function getDecimal(): float{
 		$this->requireBaseOdd();
-		return $this->decimal;
+		return round($this->decimal, $this->getDecimalPlaces(), $this->getRoundingMode());
 	}
 
-	public function getMoneyline(){
+	public function getMoneyline(): int{
         $this->requireBaseOdd();
-		return (float)round($this->decimalToMoneyline($this->decimal));
+		
+		if ($this->decimal >= 2.00) {
+			return (int) round(($this->decimal - 1) * 100);
+		}
+
+		return (int) round((-100) / ($this->decimal - 1));
 	}
-	
+
+	public function getIndonesian(): float {
+		$this->requireBaseOdd();
+
+		if ($this->decimal >= 2.00) {
+			return round($this->decimal - 1, $this->decimalPlaces, $this->roundingMode);
+		}
+
+		return round(-1 / ($this->decimal - 1), $this->decimalPlaces, $this->roundingMode);
+	}
+
+	public function getMalay(): float {
+		$this->requireBaseOdd();
+
+		if ($this->decimal <= 2.00) {
+			return round($this->decimal - 1, $this->decimalPlaces, $this->roundingMode);
+		}
+
+		return round(-1 / ($this->decimal - 1), $this->decimalPlaces, $this->roundingMode);
+	}
+
 	public function getFractional(): string{
-		$this->requireBaseOdd(); 
-		return $this->decimalToFraction($this->decimal);
+		$this->requireBaseOdd();
+
+		[$numerator, $denominator] = $this->reduceFraction((int)(($this->decimal - 1) * 100), 100);
+    	return "{$numerator}/{$denominator}";
 	}
 
-	public function getImpliedProbability(){
+	public function getImpliedProbability(): float{
         $this->requireBaseOdd();
-		return $this->decimalToImpliedProbability($this->decimal);
+		
+		return round(1 / $this->decimal * 100, $this->getDecimalPlaces(), $this->getRoundingMode());	
 	}
-
-	private function decimalToImpliedProbability($decimal){
-		if(Validator::isDecimal($value)){
-			return round(1/(float)$decimal*100, $this->getDecimalPlaces());	
-		}
-		return false;
-	}
-
-	private function decimalToMoneyline(float $decimal): float {
-		if ($decimal >= 2.00) {
-			return ($decimal - 1) * 100;
-		}
-
-		return (-100) / ($decimal - 1);
-	}
-	
-	private function decimalToFraction(float $value){
-		if(!Validator::isDecimal($value)){
-			return false;
-		}
-
-		$dec = number_format($value, $this->getDecimalPlaces());
-        $reduced = $this->reduceFraction(round(($dec-1)*100), round(100));
-        return $reduced[0]."/".$reduced[1];
-	}
-	
-	private function fractionalToDecimal(string $fractional): float{
-		$fraction = explode("/", $fractional);
-		return $fraction[0]/$fraction[1]+1.00;
-	}
-
-	private function moneylineToDecimal($moneyline){
-		if(Validator::isMoneyline($moneyline)){
-			if($moneyline>0){
-				return $moneyline/100+1;
-			}else{
-				return abs($moneyline)/100+1;
-			}
-		}
-		return false;
-	}
-
-    private function hasDecimalPart(float $value): bool{
-        return floor($value) != $value;
-    }
 
 	private function reduceFraction(int $a, int $b): array {
 		$gcd = $this->gcd($a, $b);
@@ -155,17 +166,9 @@ class Odds{
 		return ($a % $b) ? $this->gcd($b, $a % $b) : $b;
 	}
 
-	private function parse_float($value=0.0){
-		return floatval(preg_replace('/\.(?=.*\.)/', '', str_replace(",", ".", $value)));
-	}
-
 	private function requireBaseOdd(): void{
 		if($this->decimal === null){
 			throw new \BadMethodCallException(OddsErrors::NoOddSet->value);
 		}
-	}
-	
-	public function __toString(): string {
-	    //return number_format($this->decimal, $this->decimalPlaces);
 	}
 }

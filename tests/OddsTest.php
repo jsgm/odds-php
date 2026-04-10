@@ -71,4 +71,25 @@ class OddsTest extends TestCase {
         $this->assertEquals(1, $odds->getDecimal());
         $this->assertEquals(1.0, $odds->getDecimal());
     }
+
+    public function testHongKong(): void {
+        $odds = new Odds();
+
+        $this->assertEquals(0.55, $odds->setDecimal(1.55)->getHongKong());
+        $this->assertEquals(0.75, $odds->setHongKong(0.75)->getHongKong());
+        $this->assertEquals(0.55, $odds->setFractional('11/20')->getHongKong());
+        $this->assertEquals(1.50, $odds->setMoneyline(150)->getHongKong());
+        $this->assertEquals(0.25, $odds->setMoneyline(-400)->getHongKong());
+        $this->assertEquals(0.25, $odds->setImpliedProbability(80.0)->getHongKong());
+    }
+
+    public function testReduceFractions(): void {
+        $odds = new Odds();
+
+        $this->assertEquals('1/2', $odds->setFractional('1/2')->getFractional());
+        $this->assertEquals('11/20', $odds->setFractional('22/40')->getFractional());
+        $this->assertEquals('1/1', $odds->setFractional('1/1')->getFractional());
+        $this->assertEquals('7/2', $odds->setFractional('14/4')->getFractional());
+        $this->assertEquals('2/1', $odds->setFractional('2/1')->getFractional());
+    }
 }
