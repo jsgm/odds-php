@@ -28,6 +28,124 @@ class Odds{
    	private ?float $decimal = null;
    	private int $decimalPlaces = 2;
    	private RoundingMode $roundingMode = RoundingMode::HalfAwayFromZero;
+	
+	public function setAmerican(int $value): static {
+		return $this->setMoneyline($value);
+	}
+
+	public function getAmerican(): int {
+		return $this->getMoneyline();
+	}
+
+    public function setDecimal(float $value): static{
+        if(!Validator::isDecimal($value)){
+        	throw new \InvalidArgumentException(OddsErrors::InvalidDecimal->value);
+		}
+
+		$this->decimal = $value;
+		return $this;
+    }
+
+	public function getDecimal(): float{
+		$this->requireBaseOdd();
+		return round($this->decimal, $this->getDecimalPlaces(), $this->getRoundingMode());
+	}
+
+
+    public function setFractional(string $value): static{
+        if(!Validator::isFractional($value)){
+        	throw new \InvalidArgumentException(OddsErrors::InvalidFractional->value);
+		}
+
+    	[$numerator, $denominator] = explode('/', $value);
+    	$this->decimal = (int)$numerator / (int)$denominator + 1;
+		return $this;
+    }
+
+	public function getFractional(): string{
+		$this->requireBaseOdd();
+
+		[$numerator, $denominator] = $this->reduceFraction((int)(($this->decimal - 1) * 100), 100);
+    	return "{$numerator}/{$denominator}";
+	}
+
+    public function setHongKong(float $value): static{
+        if(!Validator::isHongKong($value)){
+        	throw new \InvalidArgumentException(OddsErrors::InvalidHongKong->value);
+		}
+
+		$this->decimal = $value + 1;
+		return $this;
+    }
+
+	public function getHongKong(): float {
+		$this->requireBaseOdd();
+		return round($this->decimal - 1, $this->getDecimalPlaces(), $this->getRoundingMode());
+	}
+
+	public function setImpliedProbability(float $value): static{
+		if (!Validator::isImpliedProbability($value)) {
+			throw new \InvalidArgumentException(OddsErrors::InvalidImpliedProbability->value);
+		}
+
+        $this->decimal = 100 / $value;
+		return $this;
+	}
+
+	public function getImpliedProbability(): float{
+        $this->requireBaseOdd();
+		
+		return round(1 / $this->decimal * 100, $this->getDecimalPlaces(), $this->getRoundingMode());	
+	}
+
+	public function getIndonesian(): float {
+		$this->requireBaseOdd();
+
+		if ($this->decimal >= 2.00) {
+			return round($this->decimal - 1, $this->decimalPlaces, $this->roundingMode);
+		}
+
+		return round(-1 / ($this->decimal - 1), $this->decimalPlaces, $this->roundingMode);
+	}
+
+	public function setMalay(float $value): static {
+		if (!Validator::isMalay($value)) {
+			throw new \InvalidArgumentException(OddsErrors::InvalidMalay->value);
+		}
+
+		$this->decimal = $value > 0 ? $value + 1 : 1 - (1 / $value);
+		return $this;
+	}
+	
+	public function getMalay(): float {
+		$this->requireBaseOdd();
+
+		if ($this->decimal <= 2.00) {
+			return round($this->decimal - 1, $this->decimalPlaces, $this->roundingMode);
+		}
+
+		return round(-1 / ($this->decimal - 1), $this->decimalPlaces, $this->roundingMode);
+	}
+
+
+    public function setMoneyline(int $value): static{
+        if(!Validator::isMoneyline($value)){
+        	throw new \InvalidArgumentException(OddsErrors::InvalidMoneyline->value);
+		}
+
+        $this->decimal = (abs($value) / 100) + 1;
+		return $this;
+	}
+
+	public function getMoneyline(): int{
+        $this->requireBaseOdd();
+		
+		if ($this->decimal >= 2.00) {
+			return (int) round(($this->decimal - 1) * 100);
+		}
+
+		return (int) round((-100) / ($this->decimal - 1));
+	}
 
 	public function getRoundingMode(): RoundingMode{
 		return $this->roundingMode;
@@ -49,126 +167,18 @@ class Odds{
 		return $this->decimalPlaces;
    	}
 
-    public function setDecimal(float $value): static{
-        if(!Validator::isDecimal($value)){
-        	throw new \InvalidArgumentException(OddsErrors::InvalidDecimal->value);
-		}
-
-		$this->decimal = $value;
-		return $this;
-    }
-
-    public function setHongKong(float $value): static{
-        if(!Validator::isHongKong($value)){
-        	throw new \InvalidArgumentException(OddsErrors::InvalidHongKong->value);
-		}
-
-		$this->decimal = $value + 1;
-		return $this;
-    }
-
-    public function setFractional(string $value): static{
-        if(!Validator::isFractional($value)){
-        	throw new \InvalidArgumentException(OddsErrors::InvalidFractional->value);
-		}
-
-    	[$numerator, $denominator] = explode('/', $value);
-    	$this->decimal = (int)$numerator / (int)$denominator + 1;
-		return $this;
-    }
-
-    public function setMoneyline(int $value): static{
-        if(!Validator::isMoneyline($value)){
-        	throw new \InvalidArgumentException(OddsErrors::InvalidMoneyline->value);
-		}
-
-        $this->decimal = (abs($value) / 100) + 1;
-		return $this;
-	}
-
-	public function setImpliedProbability(float $value): static{
-		if (!Validator::isImpliedProbability($value)) {
-			throw new \InvalidArgumentException(OddsErrors::InvalidImpliedProbability->value);
-		}
-
-        $this->decimal = 100 / $value;
-		return $this;
-	}
-
-	public function setMalay(float $value): static {
-		if (!Validator::isMalay($value)) {
-			throw new \InvalidArgumentException(OddsErrors::InvalidMalay->value);
-		}
-
-		$this->decimal = $value > 0 ? $value + 1 : 1 - (1 / $value);
-		return $this;
-	}
-
-	public function getHongKong(): float {
-		$this->requireBaseOdd();
-		return round($this->decimal - 1, $this->getDecimalPlaces(), $this->getRoundingMode());
-	}
-
-	public function getDecimal(): float{
-		$this->requireBaseOdd();
-		return round($this->decimal, $this->getDecimalPlaces(), $this->getRoundingMode());
-	}
-
-	public function getMoneyline(): int{
-        $this->requireBaseOdd();
-		
-		if ($this->decimal >= 2.00) {
-			return (int) round(($this->decimal - 1) * 100);
-		}
-
-		return (int) round((-100) / ($this->decimal - 1));
-	}
-
-	public function getIndonesian(): float {
-		$this->requireBaseOdd();
-
-		if ($this->decimal >= 2.00) {
-			return round($this->decimal - 1, $this->decimalPlaces, $this->roundingMode);
-		}
-
-		return round(-1 / ($this->decimal - 1), $this->decimalPlaces, $this->roundingMode);
-	}
-
-	public function getMalay(): float {
-		$this->requireBaseOdd();
-
-		if ($this->decimal <= 2.00) {
-			return round($this->decimal - 1, $this->decimalPlaces, $this->roundingMode);
-		}
-
-		return round(-1 / ($this->decimal - 1), $this->decimalPlaces, $this->roundingMode);
-	}
-
-	public function getFractional(): string{
-		$this->requireBaseOdd();
-
-		[$numerator, $denominator] = $this->reduceFraction((int)(($this->decimal - 1) * 100), 100);
-    	return "{$numerator}/{$denominator}";
-	}
-
-	public function getImpliedProbability(): float{
-        $this->requireBaseOdd();
-		
-		return round(1 / $this->decimal * 100, $this->getDecimalPlaces(), $this->getRoundingMode());	
-	}
-
 	private function reduceFraction(int $a, int $b): array {
 		$gcd = $this->gcd($a, $b);
 		return [$a / $gcd, $b / $gcd];
-	}
-
-	private function gcd(int $a, int $b): int {
-		return ($a % $b) ? $this->gcd($b, $a % $b) : $b;
 	}
 
 	private function requireBaseOdd(): void{
 		if($this->decimal === null){
 			throw new \BadMethodCallException(OddsErrors::NoOddSet->value);
 		}
+	}
+
+	private function gcd(int $a, int $b): int {
+		return ($a % $b) ? $this->gcd($b, $a % $b) : $b;
 	}
 }
