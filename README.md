@@ -1,4 +1,4 @@
-![Building](https://github.com/jsgm/OddsPHP/actions/workflows/phplint.yml/badge.svg) ![License](https://img.shields.io/github/license/jsgm/OddsPHP)
+![Building](https://github.com/jsgm/odds-php/actions/workflows/phplint.yml/badge.svg) ![License](https://img.shields.io/github/license/jsgm/odds-php)
 
 # OddsPHP
 OddsPHP is a lightweight library to easily work with odds conversions and calculations.
@@ -10,24 +10,15 @@ With a few lines of code you'll be able to:
  - **Surebets** calculations.
 
 ## Installation
-Clone the repository or just download the files:
-```
-git clone https://github.com/scrapebet/OddsPHP.git
-```
-
-At the top of your PHP file, add the classes you need in the following order:
-```php
-require  dirname(__FILE__)."/OddsPHP/src/Odds.php";
-// require  dirname(__FILE__)."/OddsPHP/src/Payouts.php"; // (optional)
-// require  dirname(__FILE__)."/OddsPHP/src/Surebets.php"; // (optional)
-
-use OddsPHP\Odds as Odds;
-// use OddsPHP\Payouts as Payouts;
-// use OddsPHP\Surebets as Surebets;
+The recommended way to install **odds-php** is via [Composer](https://getcomposer.org):
+```bash
+composer require jsgm/odds-php
 ```
 
-## Tests
-Check the **/test** folder to find a few examples to convert and manipulate the odds.
+Alternatively, you can clone the repository directly:
+```bash
+git clone https://github.com/jsgm/odds-php.git
+```
 
 ## 1. Working with odds
 ### 1.1 Convert odds between formats
