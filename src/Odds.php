@@ -10,6 +10,8 @@
 
 namespace OddsPHP;
 
+use RoundingMode;
+
 enum OddsErrors: string {
     case NoOddSet = 'No odd has been set yet.';
 
