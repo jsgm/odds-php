@@ -4,219 +4,135 @@
  * @author    @jsgm (Github)
  * @license   MIT
  * @since     08-02-2020
- * @updated   28-05-2020
+ * @updated   10-04-2026
  *
  */
 
 namespace OddsPHP;
 
-class Odds{
-   private $decimal=null;
+enum OddsErrors: string {
+    case NoOddSet = 'No odd has been set yet.';
+    case InvalidDecimal = 'Value must be greater than 1.00 (e.g. 1.55).';
+    case InvalidHongKong = 'Value must be greater than 0 (e.g. 0.55).';
+    case InvalidFractional = 'Expected format: numerator/denominator (e.g. 2/1).';
+    case InvalidMoneyline = 'Value must be 100 or greater, or -100 or less (e.g. 150 or -200).';
+    case InvalidDecimalPlaces = 'Decimal places must be 0 or greater.';
+}
 
+class Odds{
+   private ?float $decimal = null;
    private int $decimalPlaces = 2;
 
-   const DECIMAL = 'decimal';
-   const FRACTIONAL = 'fractional';
-   const MONEYLINE = 'moneyline';
-   const IMPLIED = 'implied';
-   const HONGKONG = 'hongkong';
-   const MALAY = 'malay';
-   const INDONESIAN = 'indonesian';
-
-
-   	function __construct(){
-	}
-
-   	public function setDecimalPlaces(int $places=0): void{
+	public function setDecimalPlaces(int $places=0): void{
        	if ($places < 0) {
-    		throw new \InvalidArgumentException('Decimal places must be 0 or greater.');
+    		throw new \InvalidArgumentException(OddsErrors::InvalidDecimalPlaces->value);
 		}
-		
+
     	$this->decimalPlaces = $places;
 	}
-
 
    	public function getDecimalPlaces(): int{
 		return $this->decimalPlaces;
    	}
 
-    
-	/*
-	 *
-	 *
-	 * Sets the odd before making conversions.
-	 *
-	 *
-	 */
-    public function set($type=null, $odd=null){
-        if($type>null && $odd>null){
-			switch($type):
-				case self::DECIMAL:
-					return $this->set_decimal($this->parse_float($odd));
-				break;
-				case self::FRACTIONAL:
-					return $this->set_fractional($odd);
-				break;
-				case self::MONEYLINE:
-					return $this->set_moneyline($odd);
-				break;
-				case self::IMPLIED:
-					return $this->set_implied($odd);
-				break;
-				default:
-					throw new \Exception('Please provide a correct type for set, allowed are: \'decimal\', \'fractional\', \'moneyline\' or \'implied\'.');
-				break;
-			endswitch;
-		}else{
-			throw new \Exception('Please provide a valid odd and type.');
+    public function setDecimal(float $value): static{
+        if(!Validator::isDecimal($value)){
+        	throw new \InvalidArgumentException(OddsErrors::InvalidDecimal->value);
 		}
+
+		$this->decimal = $value;
 		return $this;
     }
 
-    public function set_decimal($odd=NULL){
-        if($odd>NULL && $this->is_decimal($odd)){
-            $this->decimal = $odd;
-        }else{
-            throw new \Exception('Provided decimal odd is not correct.');
+    public function setHongKong(float $value): static{
+        if(!Validator::isHongKong($value)){
+        	throw new \InvalidArgumentException(OddsErrors::InvalidHongKong->value);
 		}
+
+		$this->decimal = $value + 1;
 		return $this;
     }
 
-    public function set_fractional($odd=NULL){
-        if($odd>NULL && $this->is_fractional($odd)){
-            $this->decimal=$this->fractional_to_decimal($odd);
-        }else{
-            throw new \Exception('Provided fractional odd is not correct.');
+    public function setFractional(string $value): static{
+        if(!Validator::isFractional($value)){
+        	throw new \InvalidArgumentException(OddsErrors::InvalidFractional->value);
 		}
+
+        $this->decimal = $this->fractionalToDecimal($value);
 		return $this;
     }
 
-    public function set_moneyline($odd=NULL){
-        if($odd>NULL && $this->is_moneyline($odd)){
-            $this->decimal=$this->moneyline_to_decimal($odd);
-        }else{
-            throw new \Exception('Provided moneyline odd is not correct.');
+    public function setMoneyline($odd=NULL): static{
+        if(!Validator::isMoneyline($odd)){
+        	throw new \InvalidArgumentException(OddsErrors::InvalidMoneyline->value);
 		}
+
+        $this->decimal = $this->moneylineToDecimal($odd);
 		return $this;
 	}
 
-	public function set_implied($odd){
-		if($odd>null){
-            $this->decimal=$this->moneyline_to_decimal($odd);
-		}
+	public function setImpliedProbability($odd): static{
+        $this->decimal=$this->moneylineToDecimal($odd);
 		return $this;
 	}
-	
-	/*
-	 *
-	 *
-	 * Returns the odd in the chosen format.
-	 *
-	 *
-	 */   
-	public function get($type=null){
-        if($type>null){
-			switch($type):
-				case self::DECIMAL:
-					$result = $this->get_decimal();
-				break;
-				case self::FRACTIONAL:
-					$result = $this->get_fractional();
-				break;
-				case self::MONEYLINE:
-					$result = $this->get_moneyline();
-				break;
-				case self::IMPLIED:
-					$result = $this->get_implied_probability();
-				break;
-				default:
-					throw new \Exception('Please provide a correct type for set, allowed are: \'decimal\', \'fractional\' or \'moneyline\'.');
-				break;
-			endswitch;
 
-			if(isset($result) && $result){
-				return $result;
-			}
-		}else{
-			throw new \Exception('Please provide a valid odd and type.');
-		}
-		return ""; // Null result.
+	public function getHongKong(): float {
+		$this->requireBaseOdd();
+		return round($this->decimal - 1, $this->getDecimalPlaces());
 	}
 
-	public function reduce(){
-		return $this->get(self::FRACTIONAL);
+	public function getDecimal(): float{
+		$this->requireBaseOdd();
+		return $this->decimal;
 	}
 
-	private function odd_not_set_exception(){
-		if($this->decimal==null){
-			throw new \Exception('Please provide a valid odd first.');
-		} 
+	public function getMoneyline(){
+        $this->requireBaseOdd();
+		return (float)round($this->decimalToMoneyline($this->decimal));
 	}
 	
-	public function get_decimal(){
-		$this->odd_not_set_exception();
-		$decimal = (float)($this->decimal);
-		return (float)($this->decimal);
+	public function getFractional(): string{
+		$this->requireBaseOdd(); 
+		return $this->decimalToFraction($this->decimal);
 	}
-	public function get_moneyline(){
-        $this->odd_not_set_exception();
-		return (float)round($this->decimal_to_moneyline($this->decimal));
+
+	public function getImpliedProbability(){
+        $this->requireBaseOdd();
+		return $this->decimalToImpliedProbability($this->decimal);
 	}
-	public function get_fractional(){
-		$this->odd_not_set_exception(); 
-		return (string)$this->decimal_to_fraction($this->decimal);
-	}
-	public function get_implied_probability(){
-        $this->odd_not_set_exception();
-		return $this->decimal_to_implied_probability($this->decimal);
-	}
-	
-	/*
-	 *
-	 *
-	 * Convert odds between the allowed formats.
-	 *
-	 *
-	 */
-	private function decimal_to_implied_probability($decimal){
-		if($this->is_decimal($decimal)){
-			return round(1/(float)$decimal*100, $this->precision);	
+
+	private function decimalToImpliedProbability($decimal){
+		if(Validator::isDecimal($value)){
+			return round(1/(float)$decimal*100, $this->getDecimalPlaces());	
 		}
 		return false;
 	}
-	private function decimal_to_moneyline($decimal){
-		// https://www.pinnacle.com/en/betting-articles/educational/converting-between-american-and-decimal-odds/PBS2VKQZ7ZB5TZDB
-		try{
-			if($this->is_decimal($decimal)){
-				if($decimal>=2.00){
-					return ($decimal-1)*100;
-				}else{
-					if($decimal-1 == 0) return 0;
-					return (-100)/($decimal-1);
-				}
-			}
-		}catch(Exception $ex){
+
+	private function decimalToMoneyline(float $decimal): float {
+		if ($decimal >= 2.00) {
+			return ($decimal - 1) * 100;
+		}
+
+		return (-100) / ($decimal - 1);
+	}
+	
+	private function decimalToFraction(float $value){
+		if(!Validator::isDecimal($value)){
 			return false;
 		}
-		return false;
+
+		$dec = number_format($value, $this->getDecimalPlaces());
+        $reduced = $this->reduceFraction(round(($dec-1)*100), round(100));
+        return $reduced[0]."/".$reduced[1];
 	}
-	private function decimal_to_fraction($dec){
-		if($this->is_decimal($dec)){
-			$dec = number_format($dec, $this->precision);
-            $reduced = $this->reduce_fraction(round(($dec-1)*100), round(100));
-            return $reduced[0]."/".$reduced[1];
-        }
-        return false;
+	
+	private function fractionalToDecimal(string $fractional): float{
+		$fraction = explode("/", $fractional);
+		return $fraction[0]/$fraction[1]+1.00;
 	}
-	private function fractional_to_decimal($fractional){
-		if($this->is_fractional($fractional)){
-			$fraction = explode("/", $fractional);
-			return $fraction[0]/$fraction[1]+1.00;
-		}
-		return false;
-	}
-	private function moneyline_to_decimal($moneyline){
-		if($this->is_moneyline($moneyline)){
+
+	private function moneylineToDecimal($moneyline){
+		if(Validator::isMoneyline($moneyline)){
 			if($moneyline>0){
 				return $moneyline/100+1;
 			}else{
@@ -225,73 +141,31 @@ class Odds{
 		}
 		return false;
 	}
-	 
-	/*
-	 *
-	 *
-	 * Check given odds format. Allowed formats are the following ones:
-	 * - Decimal
-	 * - Fractional
-	 * - Moneyline (US)
-	 *
-	 *
-	 */
-	private function is_decimal($odds){
-		return ($this->has_decimal_part($odds) || is_numeric($odds));
-	}
-    private function has_decimal_part($odds){
-        return (is_numeric($odds) && floor($odds) != $odds);
+
+    private function hasDecimalPart(float $value): bool{
+        return floor($value) != $value;
     }
-	private function is_moneyline($odd=NULL){
-		return $this->is_numeric(abs($odd));
-	}
-	private function is_fractional($odds){
-		if(strpos($odds, "/") !== FALSE){
-			$fraction = explode("/", $odds);
-			if(!empty($fraction) && count($fraction) == 2){
-				foreach($fraction as $number){
-					if(!ctype_digit($number)){
-						return false;
-					}
-				}
-				return true;
-			}
-		}
-		return false;
-	}
-	
-	/*
-	 *
-	 *
-	 * Greatest common divisor.
-	 *
-	 *
-	 */
-	private function reduce_fraction($a, $b){
+
+	private function reduceFraction(int $a, int $b): array {
 		$gcd = $this->gcd($a, $b);
-	  	return [$a/$gcd, $b/$gcd];
-	}
-	private function gcd($a, $b) {
-		return ( $a % $b ) ? $this->gcd( $b, $a % $b ) : $b;
-	}
-	
-	/*
-	 *
-	 *
-	 * Helpers
-	 *
-	 *
-	 */
-	public function is_valid_format($format=NULL): bool{
-		return (is_string($format) && ($format===$this::DECIMAL || $format===$this::FRACTIONAL || $format===$this::MONEYLINE || $format===$this::IMPLIED));
+		return [$a / $gcd, $b / $gcd];
 	}
 
-	private function is_numeric($value){
-		return preg_match('/^[0-9]+$/i', $value);
+	private function gcd(int $a, int $b): int {
+		return ($a % $b) ? $this->gcd($b, $a % $b) : $b;
 	}
-	
+
 	private function parse_float($value=0.0){
 		return floatval(preg_replace('/\.(?=.*\.)/', '', str_replace(",", ".", $value)));
 	}
+
+	private function requireBaseOdd(): void{
+		if($this->decimal === null){
+			throw new \BadMethodCallException(OddsErrors::NoOddSet->value);
+		}
+	}
+	
+	public function __toString(): string {
+	    //return number_format($this->decimal, $this->decimalPlaces);
+	}
 }
-?>
