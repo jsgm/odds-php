@@ -11,44 +11,35 @@
 namespace OddsPHP;
 
 class Odds{
-	private $decimal=null;
-	private $precision=2;
+   private $decimal=null;
 
-	const DECIMAL = 'decimal';
-	const FRACTIONAL = 'fractional';
-	const MONEYLINE = 'moneyline';
-	const IMPLIED = 'implied';
-	const HONGKONG = 'hongkong';
-	const MALAY = 'malay';
-	const INDONESIAN = 'indonesian';
+   private int $decimalPlaces = 2;
 
-  	/*
-	 *
-	 *
-	 * Constructor.
-	 *
-	 *
-	 */  
-	function __construct(){
+   const DECIMAL = 'decimal';
+   const FRACTIONAL = 'fractional';
+   const MONEYLINE = 'moneyline';
+   const IMPLIED = 'implied';
+   const HONGKONG = 'hongkong';
+   const MALAY = 'malay';
+   const INDONESIAN = 'indonesian';
 
+
+   	function __construct(){
 	}
-    
-    /*
-	 *
-	 *
-	 * Edit precision.
-	 *
-	 *
-	 */
-    public function set_precision($precision=null){
-        if($precision>null && $this->is_numeric($precision) && $precision>=0){
-            $this->precision = (int)$precision;
+
+   	public function setDecimalPlaces(int $places=0): void{
+       	if ($places < 0) {
+    		throw new \InvalidArgumentException('Decimal places must be 0 or greater.');
 		}
+		
+    	$this->decimalPlaces = $places;
 	}
 
-    public function get_current_precision(){
-        return $this->precision;
-    }
+
+   	public function getDecimalPlaces(): int{
+		return $this->decimalPlaces;
+   	}
+
     
 	/*
 	 *
