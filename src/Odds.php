@@ -10,8 +10,6 @@
 
 namespace OddsPHP;
 
-use RoundingMode;
-
 enum OddsErrors: string {
     case NoOddSet = 'No odd has been set yet.';
 
@@ -29,7 +27,6 @@ enum OddsErrors: string {
 class Odds{
    	private ?float $decimal = null;
    	private int $decimalPlaces = 2;
-   	private RoundingMode $roundingMode = RoundingMode::HalfAwayFromZero;
 	
 	public function setAmerican(int $value): static {
 		return $this->setMoneyline($value);
@@ -50,7 +47,7 @@ class Odds{
 
 	public function getDecimal(): float{
 		$this->requireBaseOdd();
-		return round($this->decimal, $this->getDecimalPlaces(), $this->getRoundingMode());
+		return round($this->decimal, $this->getDecimalPlaces());
 	}
 
 
@@ -82,7 +79,7 @@ class Odds{
 
 	public function getHongKong(): float {
 		$this->requireBaseOdd();
-		return round($this->decimal - 1, $this->getDecimalPlaces(), $this->getRoundingMode());
+		return round($this->decimal - 1, $this->getDecimalPlaces());
 	}
 
 	public function setImpliedProbability(float $value): static{
@@ -97,17 +94,17 @@ class Odds{
 	public function getImpliedProbability(): float{
         $this->requireBaseOdd();
 		
-		return round(1 / $this->decimal * 100, $this->getDecimalPlaces(), $this->getRoundingMode());	
+		return round(1 / $this->decimal * 100, $this->getDecimalPlaces());	
 	}
 
 	public function getIndonesian(): float {
 		$this->requireBaseOdd();
 
 		if ($this->decimal >= 2.00) {
-			return round($this->decimal - 1, $this->decimalPlaces, $this->roundingMode);
+			return round($this->decimal - 1, $this->decimalPlaces);
 		}
 
-		return round(-1 / ($this->decimal - 1), $this->decimalPlaces, $this->roundingMode);
+		return round(-1 / ($this->decimal - 1), $this->decimalPlaces);
 	}
 
 	public function setMalay(float $value): static {
@@ -123,10 +120,10 @@ class Odds{
 		$this->requireBaseOdd();
 
 		if ($this->decimal <= 2.00) {
-			return round($this->decimal - 1, $this->decimalPlaces, $this->roundingMode);
+			return round($this->decimal - 1, $this->decimalPlaces);
 		}
 
-		return round(-1 / ($this->decimal - 1), $this->decimalPlaces, $this->roundingMode);
+		return round(-1 / ($this->decimal - 1), $this->decimalPlaces);
 	}
 
 
@@ -147,14 +144,6 @@ class Odds{
 		}
 
 		return (int) round((-100) / ($this->decimal - 1));
-	}
-
-	public function getRoundingMode(): RoundingMode{
-		return $this->roundingMode;
-	}
-
-	public function setRoundingMode(RoundingMode $mode): void {
-		$this->roundingMode = $mode;
 	}
 
 	public function setDecimalPlaces(int $places=0): void{
