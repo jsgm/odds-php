@@ -11,13 +11,13 @@
 namespace OddsPHP;
 
 enum OddsFormat: int {
-    case Decimal;
-    case Fractional;
-    case HongKong;
-	case ImpliedProbability;
-	case Indonesian;
-	case Malay;
-    case Moneyline;
+    case Decimal = 0;
+    case Fractional = 1;
+    case HongKong = 2;
+	case ImpliedProbability = 3;
+	case Indonesian = 4;
+	case Malay = 5;
+    case Moneyline = 6;
 }
 
 enum OddsErrors: string {
