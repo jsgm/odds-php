@@ -10,6 +10,16 @@
 
 namespace OddsPHP;
 
+enum OddsFormat: int {
+    case Decimal;
+    case Fractional;
+    case HongKong;
+	case ImpliedProbability;
+	case Indonesian;
+	case Malay;
+    case Moneyline;
+}
+
 enum OddsErrors: string {
     case NoOddSet = 'No odd has been set yet.';
 
